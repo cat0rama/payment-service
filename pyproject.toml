@@ -1,0 +1,33 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = [
+    "integration: requires Docker (Postgres + RabbitMQ via testcontainers)",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I сортировка импортов, UP pyupgrade, B bugbear
+select = ["E", "W", "F", "I", "UP", "B"]
+# длину кода держит форматтер; E501 при этом ловит только хвостовые
+# комментарии/строки, которые форматтер не разбивает (и --fix не чинит).
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# в FastAPI вызовы Depends/Query/Header/Security в дефолтах аргументов — это
+# штатный механизм DI, а не баг B008; помечаем их как разрешённые.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Header",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Cookie",
+    "fastapi.Security",
+    "fastapi.Form",
+    "fastapi.File",
+]
