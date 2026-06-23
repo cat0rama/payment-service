@@ -44,59 +44,70 @@ def sign_payload(body: bytes, timestamp: int, secret: str | None = None) -> str:
     return hmac.new(key, signed, hashlib.sha256).hexdigest()
 
 
-async def deliver_webhook(payment: Payment) -> None:
-    """Отправить результат POST-запросом на webhook_url платежа с повторами.
+class WebhookSender:
+    """Доставка webhook-уведомлений: HMAC-подпись, SSRF-проверка и повторы.
 
-    Тело запроса подписывается HMAC (``X-Webhook-Signature``), а целевой URL
-    повторно проверяется SSRF-guard'ом прямо перед отправкой. Повторяет
-    `webhook_max_attempts` раз с экспоненциальным backoff; бросает
-    `WebhookDeliveryError`, если все попытки провалились.
+    Выделено в отдельный класс, чтобы обработку платежа можно было тестировать,
+    подменив отправителя, и чтобы вся логика доставки жила в одном месте.
     """
-    # повторно проверяем и в момент доставки (защита от dns-rebinding между
-    # созданием платежа и обработкой).
-    await validate_webhook_url_async(payment.webhook_url)
 
-    payload = build_webhook_payload(payment)
-    # сериализуем один раз, чтобы подписанные байты совпадали с отправляемыми.
-    body = json.dumps(payload, separators=(",", ":")).encode()
-    timestamp = int(time.time())
-    signature = sign_payload(body, timestamp)
-    headers = {
-        "Content-Type": "application/json",
-        "X-Webhook-Timestamp": str(timestamp),
-        "X-Webhook-Signature": f"t={timestamp},v1={signature}",
-    }
+    async def deliver(self, payment: Payment) -> None:
+        """Отправить результат POST-запросом на ``webhook_url`` платежа с повторами.
 
-    last_error: Exception | None = None
+        Тело подписывается HMAC (``X-Webhook-Signature``), а URL повторно
+        проверяется SSRF-guard'ом прямо перед отправкой. Повторяет
+        ``webhook_max_attempts`` раз с экспоненциальным backoff; бросает
+        :class:`WebhookDeliveryError`, если все попытки провалились.
+        """
+        # повторная проверка в момент доставки (защита от dns-rebinding между
+        # созданием платежа и обработкой).
+        await validate_webhook_url_async(payment.webhook_url)
 
-    async with httpx.AsyncClient(timeout=settings.webhook_timeout_seconds) as client:
-        for attempt in range(1, settings.webhook_max_attempts + 1):
-            try:
-                response = await client.post(
-                    payment.webhook_url, content=body, headers=headers
-                )
-                response.raise_for_status()
-                logger.info(
-                    "Webhook delivered for payment %s (attempt %d, status %d)",
-                    payment.id,
-                    attempt,
-                    response.status_code,
-                )
-                return
-            except Exception as exc:  # noqa: BLE001 - повторяем при любой ошибке доставки
-                last_error = exc
-                logger.warning(
-                    "Webhook delivery failed for payment %s (attempt %d/%d): %s",
-                    payment.id,
-                    attempt,
-                    settings.webhook_max_attempts,
-                    exc,
-                )
-                if attempt < settings.webhook_max_attempts:
-                    backoff = settings.webhook_backoff_base_seconds * 2 ** (attempt - 1)
-                    await asyncio.sleep(backoff)
+        payload = build_webhook_payload(payment)
+        # сериализуем один раз, чтобы подписанные байты совпадали с отправляемыми.
+        body = json.dumps(payload, separators=(",", ":")).encode()
+        timestamp = int(time.time())
+        signature = sign_payload(body, timestamp)
+        headers = {
+            "Content-Type": "application/json",
+            "X-Webhook-Timestamp": str(timestamp),
+            "X-Webhook-Signature": f"t={timestamp},v1={signature}",
+        }
 
-    raise WebhookDeliveryError(
-        f"Failed to deliver webhook for payment {payment.id} "
-        f"after {settings.webhook_max_attempts} attempts"
-    ) from last_error
+        last_error: Exception | None = None
+
+        async with httpx.AsyncClient(
+            timeout=settings.webhook_timeout_seconds
+        ) as client:
+            for attempt in range(1, settings.webhook_max_attempts + 1):
+                try:
+                    response = await client.post(
+                        payment.webhook_url, content=body, headers=headers
+                    )
+                    response.raise_for_status()
+                    logger.info(
+                        "Webhook delivered for payment %s (attempt %d, status %d)",
+                        payment.id,
+                        attempt,
+                        response.status_code,
+                    )
+                    return
+                except Exception as exc:  # noqa: BLE001 - повторяем при любой ошибке
+                    last_error = exc
+                    logger.warning(
+                        "Webhook delivery failed for payment %s (attempt %d/%d): %s",
+                        payment.id,
+                        attempt,
+                        settings.webhook_max_attempts,
+                        exc,
+                    )
+                    if attempt < settings.webhook_max_attempts:
+                        backoff = settings.webhook_backoff_base_seconds * 2 ** (
+                            attempt - 1
+                        )
+                        await asyncio.sleep(backoff)
+
+        raise WebhookDeliveryError(
+            f"Failed to deliver webhook for payment {payment.id} "
+            f"after {settings.webhook_max_attempts} attempts"
+        ) from last_error

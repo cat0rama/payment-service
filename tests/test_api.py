@@ -11,7 +11,6 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
-from app import services
 from app.api import payments as payments_api
 from app.config import settings
 from app.database import get_session
@@ -60,10 +59,10 @@ def client(monkeypatch):
 
 
 def test_create_returns_202(client, monkeypatch):
-    async def fake_create(session, data, key):
+    async def fake_create(self, data, key):
         return make_payment(), True
 
-    monkeypatch.setattr(services, "create_payment", fake_create)
+    monkeypatch.setattr(payments_api.PaymentService, "create_payment", fake_create)
     resp = client.post(
         "/api/v1/payments",
         json=_body(),
@@ -76,10 +75,10 @@ def test_create_returns_202(client, monkeypatch):
 
 
 def test_idempotent_replay_returns_200(client, monkeypatch):
-    async def fake_create(session, data, key):
+    async def fake_create(self, data, key):
         return make_payment(), False  # существующий платёж, не созданный заново
 
-    monkeypatch.setattr(services, "create_payment", fake_create)
+    monkeypatch.setattr(payments_api.PaymentService, "create_payment", fake_create)
     resp = client.post(
         "/api/v1/payments",
         json=_body(),

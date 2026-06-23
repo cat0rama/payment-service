@@ -5,10 +5,10 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select
 
-from app import services
 from app.database import async_session_factory
 from app.models import Currency, OutboxEvent, OutboxStatus, Payment
 from app.schemas import PaymentCreate
+from app.services import PAYMENT_CREATED_EVENT, PaymentService
 
 pytestmark = pytest.mark.integration
 
@@ -25,7 +25,9 @@ def _data() -> PaymentCreate:
 
 async def test_create_persists_payment_and_outbox_in_one_transaction():
     async with async_session_factory() as session:
-        payment, created = await services.create_payment(session, _data(), "key-1")
+        payment, created = await PaymentService(session).create_payment(
+            _data(), "key-1"
+        )
 
     assert created is True
 
@@ -36,16 +38,18 @@ async def test_create_persists_payment_and_outbox_in_one_transaction():
     assert payments == 1
     assert len(events) == 1
     assert events[0].status == OutboxStatus.pending
-    assert events[0].event_type == services.PAYMENT_CREATED_EVENT
+    assert events[0].event_type == PAYMENT_CREATED_EVENT
     assert events[0].payload["payment_id"] == str(payment.id)
 
 
 async def test_same_idempotency_key_does_not_duplicate():
     async with async_session_factory() as session:
-        first, created_first = await services.create_payment(session, _data(), "key-2")
+        first, created_first = await PaymentService(session).create_payment(
+            _data(), "key-2"
+        )
     async with async_session_factory() as session:
-        second, created_second = await services.create_payment(
-            session, _data(), "key-2"
+        second, created_second = await PaymentService(session).create_payment(
+            _data(), "key-2"
         )
 
     assert created_first is True

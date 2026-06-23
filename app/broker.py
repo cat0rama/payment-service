@@ -27,7 +27,7 @@ dlx_exchange = RabbitExchange(
 # основная рабочая очередь. dead-letter здесь как страховка: если сообщение
 # будет отвергнуто (reject/nack), оно уйдёт в dlx с ключом `dead` и попадёт в
 # dlq. в штатном режиме consumer перекладывает сообщения сам — см.
-# _schedule_retry_or_dlq.
+# RetryPolicy в app/consumer.py.
 new_queue = RabbitQueue(
     settings.queue_new,
     durable=True,

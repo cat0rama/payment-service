@@ -3,11 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import services
 from app.auth import require_api_key
 from app.database import get_session
 from app.metrics import payments_created_total
 from app.schemas import PaymentCreate, PaymentCreatedResponse, PaymentResponse
+from app.services import PaymentService
 from app.url_guard import UnsafeWebhookURL, validate_webhook_url_async
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
@@ -34,7 +34,9 @@ async def create_payment(
             detail=f"Invalid webhook_url: {exc}",
         ) from exc
 
-    payment, created = await services.create_payment(session, data, idempotency_key)
+    payment, created = await PaymentService(session).create_payment(
+        data, idempotency_key
+    )
     # эхо ключа и признак повтора, чтобы клиент по заголовкам видел идемпотентность.
     response.headers["Idempotency-Key"] = idempotency_key
     response.headers["Idempotent-Replayed"] = "false" if created else "true"
@@ -58,9 +60,7 @@ async def list_payments(
     session: AsyncSession = Depends(get_session),
 ) -> list[PaymentResponse]:
     """Вернуть обработанные платежи (succeeded или failed), новые первыми."""
-    payments = await services.list_processed_payments(
-        session, limit=limit, offset=offset
-    )
+    payments = await PaymentService(session).list_payments(limit=limit, offset=offset)
     return [PaymentResponse.model_validate(p) for p in payments]
 
 
@@ -74,7 +74,7 @@ async def get_payment(
     payment_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
 ) -> PaymentResponse:
-    payment = await services.get_payment(session, payment_id)
+    payment = await PaymentService(session).get_payment(payment_id)
     if payment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found"

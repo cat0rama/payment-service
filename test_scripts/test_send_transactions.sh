@@ -21,7 +21,7 @@ set -uo pipefail
 
 API="${API:-http://localhost:8000}"
 KEY="${KEY:-super-secret-api-key}"
-WEBHOOK_URL="${WEBHOOK_URL:-https://webhook.site/1ac97c37-e19d-4927-9f3c-1ce3a108125e}"
+WEBHOOK_URL="${WEBHOOK_URL:-https://webhook.site/eb257fde-ea2d-4296-a278-0a4a6a0d60d9}"
 WAIT="${WAIT:-8}"
 
 # --- проверка зависимостей ---

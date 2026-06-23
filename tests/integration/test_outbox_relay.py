@@ -6,12 +6,11 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from app import services
 from app.config import settings
 from app.database import async_session_factory
 from app.models import Currency, OutboxEvent, OutboxStatus
-from app.outbox import _publish_batch
 from app.schemas import PaymentCreate
+from app.services import OutboxRelay, PaymentService
 
 pytestmark = pytest.mark.integration
 
@@ -20,8 +19,7 @@ async def test_relay_publishes_event_and_message_lands_in_new_queue(
     broker_ready, read_queue
 ):
     async with async_session_factory() as session:
-        payment, _ = await services.create_payment(
-            session,
+        payment, _ = await PaymentService(session).create_payment(
             PaymentCreate(
                 amount=Decimal("5.00"),
                 currency=Currency.USD,
@@ -32,7 +30,7 @@ async def test_relay_publishes_event_and_message_lands_in_new_queue(
             "relay-key",
         )
 
-    published = await _publish_batch()
+    published = await OutboxRelay().publish_batch()
     assert published == 1
 
     # событие помечено как published в бд.

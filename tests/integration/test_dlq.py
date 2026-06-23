@@ -4,8 +4,8 @@ import json
 
 import pytest
 
+from app import consumer
 from app.config import settings
-from app.consumer import _schedule_retry_or_dlq
 
 pytestmark = pytest.mark.integration
 
@@ -20,7 +20,7 @@ async def test_message_lands_in_dlq_after_max_attempts(broker_ready, read_queue)
     # retry_count = max-1, значит attempts_made == max, ветка dlq.
     message = FakeMessage({"x-retry-count": settings.max_processing_attempts - 1})
 
-    await _schedule_retry_or_dlq(body, message, Exception("permanent failure"))
+    await consumer.retry_policy.schedule(body, message, Exception("permanent failure"))
 
     delivered = await read_queue(settings.queue_dlq)
     assert delivered is not None

@@ -61,7 +61,7 @@ async def test_delivery_sends_valid_signature(monkeypatch):
 
     monkeypatch.setattr(webhook.httpx, "AsyncClient", client_factory)
 
-    await webhook.deliver_webhook(make_payment("https://127.0.0.1/hook"))
+    await webhook.WebhookSender().deliver(make_payment("https://127.0.0.1/hook"))
 
     ts = int(captured["headers"]["X-Webhook-Timestamp"])
     expected = hmac.new(
@@ -73,4 +73,4 @@ async def test_delivery_sends_valid_signature(monkeypatch):
 async def test_delivery_rejects_private_host_when_not_allowed(monkeypatch):
     monkeypatch.setattr(settings, "webhook_allow_private_hosts", False)
     with pytest.raises(UnsafeWebhookURL):
-        await webhook.deliver_webhook(make_payment("https://127.0.0.1/hook"))
+        await webhook.WebhookSender().deliver(make_payment("https://127.0.0.1/hook"))

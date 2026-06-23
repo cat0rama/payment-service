@@ -1,4 +1,4 @@
-"""Маршрутизация retry/DLQ в consumer и идемпотентная обработка."""
+"""Маршрутизация retry/DLQ (RetryPolicy) и идемпотентная обработка (PaymentProcessor)."""
 
 import uuid
 from decimal import Decimal
@@ -6,6 +6,7 @@ from decimal import Decimal
 from app import consumer
 from app.config import settings
 from app.models import Currency, Payment, PaymentStatus
+from app.services import PaymentProcessor
 
 
 class FakeMessage:
@@ -31,6 +32,24 @@ class FakeSession:
         self.commits += 1
 
 
+class FakeGateway:
+    def __init__(self, succeed: bool = True) -> None:
+        self.succeed = succeed
+        self.charged = False
+
+    async def charge(self, payment) -> bool:
+        self.charged = True
+        return self.succeed
+
+
+class FakeWebhook:
+    def __init__(self) -> None:
+        self.delivered: list = []
+
+    async def deliver(self, payment) -> None:
+        self.delivered.append(payment)
+
+
 async def test_schedule_retry_uses_retry_routing(monkeypatch):
     calls = []
 
@@ -40,7 +59,7 @@ async def test_schedule_retry_uses_retry_routing(monkeypatch):
     monkeypatch.setattr(consumer.broker, "publish", fake_publish)
     monkeypatch.setattr(settings, "max_processing_attempts", 3)
 
-    await consumer._schedule_retry_or_dlq(
+    await consumer.retry_policy.schedule(
         {"payment_id": "p"}, FakeMessage({"x-retry-count": 0}), Exception("boom")
     )
 
@@ -58,14 +77,14 @@ async def test_schedule_moves_to_dlq_after_max(monkeypatch):
     monkeypatch.setattr(settings, "max_processing_attempts", 3)
 
     # retry_count=2, значит attempts_made=3 >= max, уходит в dlq
-    await consumer._schedule_retry_or_dlq(
+    await consumer.retry_policy.schedule(
         {"payment_id": "p"}, FakeMessage({"x-retry-count": 2}), Exception("boom")
     )
 
     assert calls[0]["routing_key"] == settings.routing_dead
 
 
-async def test_process_payment_is_idempotent_when_done(monkeypatch):
+async def test_process_payment_is_idempotent_when_done():
     payment = Payment(
         id=uuid.uuid4(),
         amount=Decimal("1.00"),
@@ -75,23 +94,22 @@ async def test_process_payment_is_idempotent_when_done(monkeypatch):
         idempotency_key="k",
         webhook_url="https://127.0.0.1/h",
     )
-    monkeypatch.setattr(consumer, "async_session_factory", lambda: FakeSession(payment))
+    gateway = FakeGateway()
+    webhook = FakeWebhook()
+    processor = PaymentProcessor(
+        session_factory=lambda: FakeSession(payment),
+        gateway=gateway,
+        webhook_sender=webhook,
+    )
 
-    called = False
+    await processor.process(payment.id)
 
-    async def fake_deliver(p):
-        nonlocal called
-        called = True
-
-    monkeypatch.setattr(consumer, "deliver_webhook", fake_deliver)
-
-    await consumer._process_payment(payment.id)
-
-    assert called is False  # уже доставлен, повторно не отправляем
+    assert gateway.charged is False  # уже обработан, шлюз не дёргаем
+    assert webhook.delivered == []  # уже доставлен, повторно не отправляем
     assert payment.status == PaymentStatus.succeeded
 
 
-async def test_process_payment_runs_when_pending(monkeypatch):
+async def test_process_payment_runs_when_pending():
     payment = Payment(
         id=uuid.uuid4(),
         amount=Decimal("1.00"),
@@ -101,23 +119,17 @@ async def test_process_payment_runs_when_pending(monkeypatch):
         idempotency_key="k2",
         webhook_url="https://127.0.0.1/h",
     )
-    monkeypatch.setattr(consumer, "async_session_factory", lambda: FakeSession(payment))
-    monkeypatch.setattr(
-        consumer.random, "uniform", lambda a, b: 0.0
-    )  # без реальной задержки
-    monkeypatch.setattr(
-        consumer.random, "random", lambda: 0.0
-    )  # меньше success_rate, значит успех
+    gateway = FakeGateway(succeed=True)
+    webhook = FakeWebhook()
+    processor = PaymentProcessor(
+        session_factory=lambda: FakeSession(payment),
+        gateway=gateway,
+        webhook_sender=webhook,
+    )
 
-    delivered = []
+    await processor.process(payment.id)
 
-    async def fake_deliver(p):
-        delivered.append(p)
-
-    monkeypatch.setattr(consumer, "deliver_webhook", fake_deliver)
-
-    await consumer._process_payment(payment.id)
-
+    assert gateway.charged is True
     assert payment.status == PaymentStatus.succeeded
     assert payment.webhook_delivered is True
-    assert delivered == [payment]
+    assert webhook.delivered == [payment]

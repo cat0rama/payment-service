@@ -27,8 +27,10 @@ def test_blocks_private_and_internal_hosts(url, monkeypatch):
         validate_webhook_url(url)
 
 
-def test_blocks_disallowed_scheme():
-    # http не входит в разрешённые по умолчанию схемы ({"https"})
+def test_blocks_disallowed_scheme(monkeypatch):
+    # проверяем продовый дефолт: разрешён только https. (локальный .env может
+    # расширять схемы до "https,http", поэтому фиксируем значение явно.)
+    monkeypatch.setattr(settings, "webhook_allowed_schemes", {"https"})
     with pytest.raises(UnsafeWebhookURL):
         validate_webhook_url("http://93.184.216.34/hook")
     with pytest.raises(UnsafeWebhookURL):

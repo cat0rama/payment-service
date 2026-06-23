@@ -24,10 +24,5 @@ extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.Query",
     "fastapi.Header",
-    "fastapi.Path",
-    "fastapi.Body",
-    "fastapi.Cookie",
     "fastapi.Security",
-    "fastapi.Form",
-    "fastapi.File",
 ]

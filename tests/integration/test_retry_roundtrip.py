@@ -10,8 +10,8 @@ import json
 
 import pytest
 
+from app import consumer
 from app.config import settings
-from app.consumer import _schedule_retry_or_dlq
 
 pytestmark = pytest.mark.integration
 
@@ -30,7 +30,7 @@ async def test_retry_message_returns_to_new_queue_after_ttl(
     # x-retry-count=0 -> attempts_made=1 < max -> ветка retry (а не dlq).
     message = FakeMessage({"x-retry-count": 0})
 
-    await _schedule_retry_or_dlq(body, message, Exception("temporary failure"))
+    await consumer.retry_policy.schedule(body, message, Exception("temporary failure"))
 
     # сразу в payments.new сообщения быть не должно: оно «отлёживается» ~0.5 с в
     # retry-очереди. (если бы expiration был в мс, оно вернулось бы мгновенно.)
