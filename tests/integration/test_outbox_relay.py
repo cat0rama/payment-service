@@ -6,11 +6,12 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from app.config import settings
-from app.database import async_session_factory
-from app.models import Currency, OutboxEvent, OutboxStatus
+from app.core.config import settings
+from app.db.database import async_session_factory
+from app.db.models import Currency, OutboxEvent, OutboxStatus
 from app.schemas import PaymentCreate
-from app.services import OutboxRelay, PaymentService
+from app.services import PaymentService
+from app.workers.relay import OutboxRelay
 
 pytestmark = pytest.mark.integration
 

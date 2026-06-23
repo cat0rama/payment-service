@@ -7,9 +7,9 @@ import time
 
 import httpx
 
-from app.config import settings
-from app.models import Payment
-from app.url_guard import validate_webhook_url_async
+from app.core.config import settings
+from app.db.models import Payment
+from app.webhooks.url_guard import validate_webhook_url_async
 
 logger = logging.getLogger("webhook")
 

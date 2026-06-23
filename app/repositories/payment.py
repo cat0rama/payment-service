@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Payment
+from app.db.models import Payment
 
 
 class PaymentRepository:

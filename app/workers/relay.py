@@ -2,8 +2,8 @@ import asyncio
 import logging
 
 from app.broker import broker, payments_exchange
-from app.config import settings
-from app.database import async_session_factory
+from app.core.config import settings
+from app.db.database import async_session_factory
 from app.repositories import OutboxRepository
 
 logger = logging.getLogger("outbox")

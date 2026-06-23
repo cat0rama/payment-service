@@ -12,8 +12,9 @@ from app.broker import (
     new_queue,
     payments_exchange,
 )
-from app.config import settings
-from app.services import OutboxRelay, PaymentProcessor
+from app.core.config import settings
+from app.services import PaymentProcessor
+from app.workers.relay import OutboxRelay
 
 logging.basicConfig(
     level=logging.INFO,

@@ -397,33 +397,52 @@ docker compose run --rm migrate alembic upgrade head
 
 ## Структура проекта
 
+Код разбит по слоям: бизнес-логика (`services`) отделена от доступа к данным
+(`repositories`) и от инфраструктуры (`core`, `db`, `broker`).
+
 ```
 app/
-  main.py        # FastAPI приложение
-  config.py      # настройки (pydantic-settings)
-  database.py    # async engine / session
-  models.py      # SQLAlchemy модели: Payment, OutboxEvent
-  schemas.py     # Pydantic v2 схемы
-  auth.py        # проверка X-API-Key
-  api/payments.py# эндпоинты
-  services.py    # создание платежа + запись в outbox (одна транзакция)
-  broker.py      # RabbitMQ топология (exchange, очереди, DLQ)
-  outbox.py      # relay: публикация событий из outbox
-  webhook.py     # доставка webhook с retry + HMAC-подпись
-  consumer.py    # FastStream consumer + lifecycle outbox relay
-  url_guard.py   # SSRF-проверка webhook_url
-  rate_limit.py  # in-process fixed-window rate limiter
-  metrics.py     # кастомные Prometheus-метрики
-  logging_buffer.py # in-memory буфер логов для GET /logs
-alembic/         # миграции
-monitoring/      # конфиги Loki, Promtail, Prometheus, провижининг Grafana
-tests/           # pytest (юнит-тесты, без внешних зависимостей)
+  main.py              # сборка FastAPI-приложения, middleware, /health, /logs
+  api/                 # HTTP-слой
+    payments.py        #   эндпоинты POST/GET /api/v1/payments
+    auth.py            #   проверка X-API-Key
+  schemas/             # Pydantic v2 DTO запросов/ответов
+    payment.py
+  services/            # бизнес-логика
+    payment.py         #   PaymentService: платёж + outbox в одной транзакции
+    processor.py       #   PaymentProcessor: обработка (шлюз + webhook, идемпотентно)
+  repositories/        # слой доступа к данным (repository pattern)
+    payment.py         #   PaymentRepository
+    outbox.py          #   OutboxRepository
+  workers/             # фоновые воркеры
+    consumer.py        #   FastStream consumer + RetryPolicy + запуск relay
+    relay.py           #   OutboxRelay: публикация событий из outbox
+  broker/              # RabbitMQ
+    connection.py      #   брокер, обменники, очереди, declare_topology (retry/DLQ)
+  gateway/             # эмуляция внешнего платёжного шлюза
+    gateway.py         #   PaymentGateway
+  webhooks/            # доставка webhook
+    sender.py          #   WebhookSender: HMAC-подпись + retry
+    url_guard.py       #   SSRF-проверка webhook_url
+  db/                  # БД-инфраструктура и ORM
+    database.py        #   create_engine / async session / Base
+    models.py          #   SQLAlchemy модели: Payment, OutboxEvent
+  core/                # кросс-каттинг
+    config.py          #   настройки (pydantic-settings)
+    rate_limit.py      #   in-process fixed-window rate limiter
+    metrics.py         #   кастомные Prometheus-метрики
+    logging_buffer.py  #   in-memory буфер логов для GET /logs
+alembic/               # миграции
+monitoring/            # конфиги Loki, Promtail, Prometheus, провижининг Grafana
+tests/                 # pytest: юнит (tests/) + интеграционные (tests/integration/)
 docker-compose.yml
 Dockerfile
-Makefile         # команды: make up / down / test / logs / migrate
+Makefile               # команды: make up / down / test / logs / migrate
 ```
 
-Было желание разбить файлы структурно по папкам, но так как их мало, смысла это не имеет.
+Поток зависимостей: `api -> services -> repositories -> db`; воркеры
+(`workers`) используют `services`/`broker`/`repositories`; общая инфраструктура
+(`config`, `metrics`, `rate_limit` и тд) живёт в `core`.
 
 ## Что можно было добавить?
 1. JWT для полноценной авторизации.

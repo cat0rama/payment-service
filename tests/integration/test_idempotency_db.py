@@ -5,8 +5,8 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select
 
-from app.database import async_session_factory
-from app.models import Currency, OutboxEvent, OutboxStatus, Payment
+from app.db.database import async_session_factory
+from app.db.models import Currency, OutboxEvent, OutboxStatus, Payment
 from app.schemas import PaymentCreate
 from app.services import PAYMENT_CREATED_EVENT, PaymentService
 

@@ -3,12 +3,12 @@ import uuid
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_api_key
-from app.database import get_session
-from app.metrics import payments_created_total
+from app.api.auth import require_api_key
+from app.core.metrics import payments_created_total
+from app.db.database import get_session
 from app.schemas import PaymentCreate, PaymentCreatedResponse, PaymentResponse
 from app.services import PaymentService
-from app.url_guard import UnsafeWebhookURL, validate_webhook_url_async
+from app.webhooks.url_guard import UnsafeWebhookURL, validate_webhook_url_async
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 

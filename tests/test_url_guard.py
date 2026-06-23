@@ -2,8 +2,8 @@
 
 import pytest
 
-from app.config import settings
-from app.url_guard import UnsafeWebhookURL, validate_webhook_url
+from app.core.config import settings
+from app.webhooks.url_guard import UnsafeWebhookURL, validate_webhook_url
 
 
 @pytest.mark.parametrize(

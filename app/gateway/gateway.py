@@ -1,8 +1,8 @@
 import asyncio
 import random
 
-from app.config import settings
-from app.models import Payment
+from app.core.config import settings
+from app.db.models import Payment
 
 
 class PaymentGateway:

@@ -1,7 +1,7 @@
 """Юнит-тесты rate limiter с фиксированным окном."""
 
-import app.rate_limit as rate_limit_module
-from app.rate_limit import FixedWindowRateLimiter
+import app.core.rate_limit as rate_limit_module
+from app.core.rate_limit import FixedWindowRateLimiter
 
 
 def test_allows_requests_within_limit():

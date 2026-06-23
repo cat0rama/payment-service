@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import OutboxEvent, Payment, PaymentStatus
+from app.db.models import OutboxEvent, Payment, PaymentStatus
 from app.repositories import OutboxRepository, PaymentRepository
 from app.schemas import PaymentCreate
 

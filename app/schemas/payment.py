@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
-from app.models import Currency, PaymentStatus
+from app.db.models import Currency, PaymentStatus
 
 
 class PaymentCreate(BaseModel):

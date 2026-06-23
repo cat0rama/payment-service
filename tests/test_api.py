@@ -12,10 +12,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import payments as payments_api
-from app.config import settings
-from app.database import get_session
+from app.core.config import settings
+from app.db.database import get_session
+from app.db.models import Currency, Payment, PaymentStatus
 from app.main import app
-from app.models import Currency, Payment, PaymentStatus
 
 
 def make_payment() -> Payment:

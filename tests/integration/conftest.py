@@ -2,7 +2,7 @@
 
 Поднимает реальные Postgres и RabbitMQ через testcontainers (нужен запущенный Docker).
 Переменные окружения выставляются ДО импорта любого модуля app, чтобы
-`app.config.settings` и `app.database.engine` привязались к контейнерам.
+`app.core.config.settings` и `app.db.database.engine` привязались к контейнерам.
 
 Если Docker недоступен, старт контейнеров падает, и каждый интеграционный тест
 пропускается (см. `_require_docker`), а не падает с ошибкой.
@@ -59,8 +59,8 @@ async def _db_setup(_require_docker):
     """Создать схему и начинать каждый тест с пустых таблиц."""
     from sqlalchemy import text
 
-    import app.models  # noqa: F401 - регистрируем модели в Base.metadata
-    from app.database import Base, async_session_factory, engine
+    import app.db.models  # noqa: F401 - регистрируем модели в Base.metadata
+    from app.db.database import Base, async_session_factory, engine
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -76,7 +76,7 @@ async def _db_setup(_require_docker):
 async def broker_ready(_db_setup):
     """Подключённый FastStream-брокер с объявленной топологией и очищенными очередями."""
     from app.broker import broker, declare_topology
-    from app.config import settings
+    from app.core.config import settings
 
     await broker.connect()
     await declare_topology()

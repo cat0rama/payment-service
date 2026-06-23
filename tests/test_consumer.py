@@ -3,10 +3,10 @@
 import uuid
 from decimal import Decimal
 
-from app import consumer
-from app.config import settings
-from app.models import Currency, Payment, PaymentStatus
+from app.core.config import settings
+from app.db.models import Currency, Payment, PaymentStatus
 from app.services import PaymentProcessor
+from app.workers import consumer
 
 
 class FakeMessage:

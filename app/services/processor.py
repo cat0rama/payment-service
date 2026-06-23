@@ -2,11 +2,11 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from app.database import async_session_factory
+from app.db.database import async_session_factory
+from app.db.models import PaymentStatus
 from app.gateway import PaymentGateway
-from app.models import PaymentStatus
 from app.repositories import PaymentRepository
-from app.webhook import WebhookSender
+from app.webhooks.sender import WebhookSender
 
 logger = logging.getLogger("consumer")
 

@@ -9,10 +9,10 @@ from decimal import Decimal
 import httpx
 import pytest
 
-from app import webhook
-from app.config import settings
-from app.models import Currency, Payment, PaymentStatus
-from app.url_guard import UnsafeWebhookURL
+from app.core.config import settings
+from app.db.models import Currency, Payment, PaymentStatus
+from app.webhooks import sender as webhook
+from app.webhooks.url_guard import UnsafeWebhookURL
 
 
 def make_payment(url: str = "https://127.0.0.1/hook") -> Payment:

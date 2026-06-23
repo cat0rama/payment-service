@@ -81,7 +81,7 @@ services:
 
   consumer:
     <<: *app
-    command: faststream run app.consumer:app
+    command: faststream run app.workers.consumer:app
     networks:
       - backend
     depends_on: *app-deps

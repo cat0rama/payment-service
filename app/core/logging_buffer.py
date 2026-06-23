@@ -10,7 +10,7 @@ from collections import deque
 from datetime import UTC, datetime
 from threading import Lock
 
-from app.config import settings
+from app.core.config import settings
 
 
 class RingBufferLogHandler(logging.Handler):

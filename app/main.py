@@ -7,12 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from app.api.auth import require_api_key
 from app.api.payments import router as payments_router
-from app.auth import require_api_key
-from app.config import settings
-from app.logging_buffer import ring_buffer_handler, setup_log_buffer
-from app.metrics import rate_limited_total
-from app.rate_limit import FixedWindowRateLimiter
+from app.core.config import settings
+from app.core.logging_buffer import ring_buffer_handler, setup_log_buffer
+from app.core.metrics import rate_limited_total
+from app.core.rate_limit import FixedWindowRateLimiter
 
 logging.basicConfig(
     level=logging.INFO,

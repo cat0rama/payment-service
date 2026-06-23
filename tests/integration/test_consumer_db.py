@@ -9,8 +9,8 @@ from decimal import Decimal
 
 import pytest
 
-from app.database import async_session_factory
-from app.models import Currency, Payment, PaymentStatus
+from app.db.database import async_session_factory
+from app.db.models import Currency, Payment, PaymentStatus
 from app.services import PaymentProcessor
 
 pytestmark = pytest.mark.integration

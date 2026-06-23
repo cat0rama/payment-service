@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from app import consumer
-from app.config import settings
+from app.core.config import settings
+from app.workers import consumer
 
 pytestmark = pytest.mark.integration
 

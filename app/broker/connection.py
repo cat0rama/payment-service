@@ -5,7 +5,7 @@ from faststream.rabbit import (
     RabbitQueue,
 )
 
-from app.config import settings
+from app.core.config import settings
 
 broker = RabbitBroker(settings.rabbitmq_url)
 

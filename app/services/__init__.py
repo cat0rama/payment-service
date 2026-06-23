@@ -2,11 +2,9 @@
 
 from app.services.payment import PAYMENT_CREATED_EVENT, PaymentService
 from app.services.processor import PaymentProcessor
-from app.services.relay import OutboxRelay
 
 __all__ = [
     "PAYMENT_CREATED_EVENT",
-    "OutboxRelay",
     "PaymentProcessor",
     "PaymentService",
 ]

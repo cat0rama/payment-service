@@ -12,7 +12,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 
-from app.config import settings
+from app.core.config import settings
 
 
 class UnsafeWebhookURL(Exception):
